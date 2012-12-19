@@ -37,6 +37,7 @@ command -v apt-get > /dev/null 2>&1
 if [ $? -eq 0 ]; then
     PM=apt-ubuntu
 
+    sudo apt-get install -y python-software-properties
     ## PPA to get latest versions of nodejs and npm
     if [[ ! $(sudo grep -r "chris-lea/node\.js" /etc/apt/) ]]; then
         sudo add-apt-repository -y ppa:chris-lea/node.js
@@ -47,12 +48,12 @@ if [ $? -eq 0 ]; then
         libevent-dev python-setuptools  \
         postgresql memcached \
         nodejs npm \
-        gdebi-core python-software-properties
+        gdebi-core
 
     sudo apt-get build-dep -y python-psycopg2 python-lxml
 
     # Dependencies for CouchDB and building it
-    sudo apt-get install g++ curl build-essential \
+    sudo apt-get install -y g++ curl build-essential \
         erlang-base erlang-dev erlang-eunit erlang-nox \
         libmozjs185-dev libicu-dev libcurl4-gnutls-dev libtool
 
@@ -110,16 +111,27 @@ if [ ! -d /usr/lib/jvm/jdk1.7.0 ]; then
     sudo rm -r /usr/lib/jvm/jdk1.7.0/
     sudo mv ./jdk1.7.0* /usr/lib/jvm/jdk1.7.0
 
+    sudo update-alternatives --install "/usr/bin/java" "java" "/usr/lib/jvm/jdk1.7.0/bin/java" 1
+    sudo update-alternatives --install "/usr/bin/javac" "javac" "/usr/lib/jvm/jdk1.7.0/bin/javac" 1
+    sudo update-alternatives --install "/usr/bin/javaws" "javaws" "/usr/lib/jvm/jdk1.7.0/bin/javaws" 1
+
+    sudo update-alternatives --config java
+
 fi
 
 ## Install Jython ##
 if [ ! -d /usr/local/lib/jython ]; then
+    if [ ! -f jython_installer-2.5.2.jar ]; then
+        wget http://downloads.sourceforge.net/project/jython/jython/2.5.2/jython_installer-2.5.2.jar
+    fi
     # Set /usr/local/lib/jython as the target directory
     sudo java -jar jython_installer-2.5.2.jar
 
     sudo ln -s /usr/local/lib/jython/bin/jython /usr/local/bin/
 
-    wget http://peak.telecommunity.com/dist/ez_setup.py
+    if [ ! -f ez_setup.py ]; then
+        wget http://peak.telecommunity.com/dist/ez_setup.py
+    fi
     sudo jython ez_setup.py
 fi
 
@@ -193,7 +205,7 @@ if [ ! -f /etc/init.d/elasticsearch ]; then
     fi
 fi
 
-# We do this at the end in case anything above (such as gdebi elasticsearch.deb) 
+# We do this again at the end in case anything above (such as gdebi elasticsearch.deb) 
 # installs a system java package and changes the configured java install path,
 # which we don't want
 

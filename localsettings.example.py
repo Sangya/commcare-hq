@@ -125,8 +125,8 @@ FORMTRANSLATE_TIMEOUT = 5
 ADM_ENABLED_PROJECTS = []
 
 # prod settings
-SOIL_DEFAULT_CACHE = "redis"
-SOIL_BACKEND = "soil.CachedDownload"
+#SOIL_DEFAULT_CACHE = "redis"
+#SOIL_BACKEND = "soil.CachedDownload"
 
 ELASTICSEARCH_HOST = 'localhost' #on both a local and a distributed environment this should be
 # localhost

@@ -171,6 +171,31 @@ if [ ! -f /etc/init.d/couchdb ]; then
     sudo chown -R couchdb:couchdb /usr/local/var/run/couchdb
 fi
 
+## Install couchdb-lucene
+if [ ! -f /etc/init.d/couchdb-lucene ]; then
+    if [ ! -f couchdb-lucene-0.8.0-dist.zip ]; then
+        wget https://github.com/downloads/rnewson/couchdb-lucene/couchdb-lucene-0.8.0-dist.zip
+    fi
+
+    unzip couchdb-lucene-0.8.0-dist.zip
+    sudo cp couchdb-lucene-0.8.0 /usr/local
+    rm -r couchdb-lucene-0.8.0
+    sudo cp /usr/local/couchdb-lucene-0.8.0/tools/etc/init.d/couchdb-lucene/couchdb-lucene /etc/init.d/
+fi
+
+if [[ ! $(grep _fti /usr/local/etc/couchdb/local.ini) ]]; then
+    config=/usr/local/etc/couchdb/local.ini
+    sudo sed -i '/\[couchdb\]/ a\os_process_timeout=60000' $config
+
+    echo "
+[external]
+fti=/usr/bin/python /usr/local/couchdb-lucene-0.8.0/tools/couchdb-external-hook.py
+
+[httpd_db_handlers]
+_fti = {couch_httpd_external, handle_external_req, <<\"fti\">>}
+" | sudo tee -a $config
+fi
+
 ## Install elastic-search ##
 if [ ! -f /etc/init.d/elasticsearch ]; then
     if [ "$PM" = "apt-ubuntu" ]; then
@@ -218,6 +243,7 @@ sudo update-alternatives --config java
 ## Ensure services start on startup ##
 if [ "$PM" = "apt-ubuntu" ]; then
     sudo update-rc.d couchdb defaults
+    sudo update-rc.d couchdb-lucene defaults
 
     # these should already be on by default
     sudo update-rc.d elasticsearch defaults
@@ -228,11 +254,13 @@ elif [ "$PM" = "yum-rhel" ]; then
     sudo chkconfig --add elasticsearch
     sudo chkconfig --add memcached
     sudo chkconfig --add postgresql
+    sudo chkconfig --add couchdb-lucene
 
     sudo chkconfig couchdb on
     sudo chkconfig elasticsearch on
     sudo chkconfig memcached on
     sudo chkconfig postgresql on
+    sudo chkconfig couchdb-lucene on
 fi
 
 ## Ensure services are running ##

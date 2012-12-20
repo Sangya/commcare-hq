@@ -97,7 +97,8 @@ sudo npm install npm
 #sudo npm install less uglify-js -g
 
 sudo pip install --upgrade pip
-sudo pip install virtualenv virtualenvwrapper
+sudo pip install virtualenv virtualenvwrapper supervisor
+echo_supervisord_conf | sudo tee /etc/supervisord.conf
 
 if [[ ! $(grep virtualenvwrapper ~/.bashrc) ]]; then
     echo "source /usr/local/bin/virtualenvwrapper.sh" >> ~/.bashrc
@@ -106,7 +107,7 @@ fi
 
 ## Install Java ##
 if [ ! -d /usr/lib/jvm/jdk1.7.0 ]; then
-    tar -xvzf jdk.tar.gz
+    tar -xzf jdk.tar.gz
     sudo mkdir /usr/lib/jvm
     sudo rm -r /usr/lib/jvm/jdk1.7.0/
     sudo mv ./jdk1.7.0* /usr/lib/jvm/jdk1.7.0
@@ -142,7 +143,7 @@ if [ ! -f /etc/init.d/couchdb ]; then
         wget http://apache.mirrors.pair.com/couchdb/releases/1.2.0/apache-couchdb-1.2.0.tar.gz
     fi
 
-    tar xvzf apache-couchdb-1.2.0.tar.gz
+    tar xzf apache-couchdb-1.2.0.tar.gz
     cd apache-couchdb-1.2.0
     if [ "$PM" = "apt-ubuntu" ]; then
         ./configure

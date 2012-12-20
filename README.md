@@ -104,6 +104,8 @@ functionality you want to use, such as SMS sending and Google Analytics.
 Ensure that the directories for `LOG_FILE` and `DJANGO_LOG_FILE` exist and are
 writeable.
 
+Finally, edit `/etc/supervisord.conf` and uncomment the last two lines, changing
+the last line to the full path of `services/templates/*.conf`. 
 
 ### Set up your django environment
 

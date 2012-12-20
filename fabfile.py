@@ -20,7 +20,9 @@ from fabric.context_managers import settings, cd
 from fabric.decorators import hosts
 from fabric.operations import require, local, prompt
 
-import os, sys
+import os
+import pwd
+import sys
 
 from fabric.api import run, roles, execute, task, sudo, env, parallel
 from fabric.contrib import files, console
@@ -187,7 +189,47 @@ def production():
 
     env.jython_home = '/usr/local/lib/jython'
     _setup_path()
-    
+
+@task
+def worldbank():
+    env.home = '/home/cchq/'
+    env.root = root = '/home/cchq/'
+    env.environment = 'worldbank'
+    env.log_root   = posixpath.join(root, 'log')
+    env.code_branch = 'master'
+    env.sudo_user = 'cchq'
+    env.hosts = ['localhost']
+    env.user = prompt("Username: ", default=env.user)
+    env.service_manager = "supervisor"
+    env.server_port = '8001'
+
+    _setup_path()
+    env.virtualenv_root = posixpath.join(root, '.virtualenvs/commcarehq')
+    env.virtualenv_root_preindex = posixpath.join(root, '.virtualenvs/commcarehq_preindex')
+
+    env.roledefs = {
+        'couch': [],
+        'pg': [],
+        'rabbitmq': [],
+        'sofabed': [],
+        'django_celery': [],
+        'django_app': [],
+        'django_public': [],
+        'django_pillowtop': [],
+        'formsplayer': [],
+        'remote_es': [],
+        'staticfiles': [],
+        'lb': [],
+        'deploy': [],
+
+        'django_monolith': ['localhost'],
+    }
+    env.jython_home = '/usr/local/lib/jython'
+    env.roles = ['django_monolith']
+
+    print env
+
+
 
 @task
 def install_packages():
@@ -279,12 +321,12 @@ def create_db():
 @task
 def bootstrap():
     """Initialize remote host environment (virtualenv, deploy, update) """
-    require('root', provided_by=('staging', 'production'))
+    require('root', provided_by=('staging', 'production', 'local'))
     sudo('mkdir -p %(root)s' % env, shell=False, user=env.sudo_user)
     execute(clone_repo)
     update_code()
     execute(create_virtualenv)
-    execute(update_env)
+    execute(update_virtualenv)
     execute(setup_dirs)
     execute(generate_supervisorconf_file)
     execute(fix_locale_perms)
@@ -319,7 +361,7 @@ def preindex_views():
     with cd(env.code_root_preindex):
         #update the codebase of the preindex dir...
         update_code(preindex=True)
-        update_env(preindex=True) #no update to env - the actual deploy will do - this may break if a new dependency is introduced in preindex
+        update_virtualenv(preindex=True) #no update to env - the actual deploy will do - this may break if a new dependency is introduced in preindex
 
         sudo('echo "%(virtualenv_root_preindex)s/bin/python %(code_root_preindex)s/manage.py \
              sync_prepare_couchdb_multi 8 %(user)s" | at -t `date -d "5 seconds" \
@@ -352,7 +394,7 @@ def deploy():
 
     try:
         execute(update_code)
-        execute(update_env)
+        execute(update_virtualenv)
         execute(clear_services_dir)
         upload_and_set_supervisor_config()
         execute(migrate)
@@ -366,7 +408,7 @@ def deploy():
 @task
 @roles('django_app','django_celery','staticfiles', 'django_public', 'django_monolith')#,'formsplayer')
 @parallel
-def update_env(preindex=False):
+def update_virtualenv(preindex=False):
     """ update external dependencies on remote host assumes you've done a code update"""
     require('code_root', provided_by=('staging', 'production', 'india'))
     if preindex:
@@ -551,7 +593,7 @@ def commit_locale_changes():
 
 def _upload_supervisor_conf_file(filename):
     upload_dict = {}
-    upload_dict["template"] = posixpath.join(os.path.dirname(__file__), 'services', 'templates', filename)
+    upload_dict["template"] = posixpath.join(env.code_root, 'services', 'templates', filename)
     upload_dict["destination"] = '/tmp/%s.blah' % filename
     upload_dict["enabled"] =  posixpath.join(env.services, u'supervisor/%s' % filename)
     upload_dict["main_supervisor_conf_dir"] = '/etc'
